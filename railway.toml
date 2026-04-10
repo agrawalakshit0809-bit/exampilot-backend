@@ -1,0 +1,6 @@
+[build]
+builder = "NIXPACKS"     # Force it to use the older, stable builder
+buildCommand = "npm install"
+
+[deploy]
+startCommand = "node index.js"
