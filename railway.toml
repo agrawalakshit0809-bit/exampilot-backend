@@ -1,6 +1,11 @@
 [build]
-builder = "NIXPACKS"     # Force it to use the older, stable builder
-buildCommand = "npm install"
+nixpacksPlan = "python"
+
+[variables]
+PYTHON_VERSION = "3.10"
+
+[phases.setup]
+aptPkgs = ["ffmpeg"]
 
 [deploy]
-startCommand = "node index.js"
+startCommand = "python get_transcript.py"
