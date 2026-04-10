@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import re
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -10,41 +11,18 @@ def get_transcript():
         return
 
     video_id = sys.argv[1]
-    # Node.js passes cookies path as second argument
     cookies_path = sys.argv[2] if len(sys.argv) > 2 else None
-    
-    # Verify cookies file actually exists and has content
+
     if cookies_path and os.path.exists(cookies_path):
         size = os.path.getsize(cookies_path)
-        print(f"🍪 Using cookies file: {cookies_path} ({size} bytes)", file=sys.stderr)
+        print(f"🍪 Cookies: {size} bytes", file=sys.stderr)
     else:
         cookies_path = None
-        print("⚠️ No cookies file found", file=sys.stderr)
+        print("⚠️ No cookies", file=sys.stderr)
 
-    # Method 1: youtube_transcript_api (fast, no cookies needed)
-    try:
-        from youtube_transcript_api import YouTubeTranscriptApi
-        api = YouTubeTranscriptApi()
-        try:
-            transcript = api.fetch(video_id, languages=['en','en-US','en-GB','en-IN'])
-        except Exception:
-            transcript_list = api.list(video_id)
-            transcript = None
-            for t in transcript_list:
-                transcript = t.fetch()
-                break
-        if transcript:
-            result = [{'text': s.text, 'start': s.start, 'duration': s.duration} for s in transcript]
-            print(json.dumps(result))
-            return
-    except Exception as e:
-        print(f"Method 1 failed: {e}", file=sys.stderr)
-
-    # Method 2: yt-dlp with cookies
     try:
         import yt_dlp
         import tempfile
-        import re
 
         url = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -62,7 +40,7 @@ def get_transcript():
             }
             if cookies_path:
                 ydl_opts['cookiefile'] = cookies_path
-                print(f"✅ yt-dlp using cookiefile", file=sys.stderr)
+                print("✅ yt-dlp using cookies", file=sys.stderr)
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.extract_info(url, download=True)
@@ -77,13 +55,12 @@ def get_transcript():
                 print(json.dumps({"error": "No captions found for this video"}))
                 return
 
-            transcript_data = []
             with open(sub_file, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            blocks = content.strip().split('\n\n')
+            transcript_data = []
             seen_texts = set()
-            for block in blocks:
+            for block in content.strip().split('\n\n'):
                 lines = block.strip().split('\n')
                 time_line = next((l for l in lines if '-->' in l), None)
                 if not time_line:
@@ -106,7 +83,7 @@ def get_transcript():
             print(json.dumps({"error": "Could not parse captions"}))
 
     except Exception as e:
-        print(json.dumps({"error": f"No captions available: {str(e)}"}))
+        print(json.dumps({"error": f"Failed: {str(e)}"}))
 
 if __name__ == "__main__":
     get_transcript()
