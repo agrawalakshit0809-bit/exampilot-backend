@@ -36,7 +36,12 @@ def get_transcript():
     # Method 2: Improved yt-dlp fallback
     try:
         import yt_dlp
-
+        cookies_path = None
+        cookies_content = os.environ.get("YOUTUBE_COOKIES", "")
+        if cookies_content:
+            cookies_path = "/tmp/yt_cookies.txt"
+        with open(cookies_path, "w") as f:
+            f.write(cookies_content)
         ydl_opts = {
             'skip_download': True,
             'writesubtitles': True,
@@ -47,7 +52,8 @@ def get_transcript():
             'no_warnings': True,
             'extractor_args': {'youtube': {'player_client': ['web', 'android', 'ios']}},
         }
-
+        if cookies_path:
+            ydl_opts['cookiefile'] = cookies_path
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
