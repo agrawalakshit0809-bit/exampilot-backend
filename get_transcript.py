@@ -13,12 +13,10 @@ def get_transcript():
     video_id = sys.argv[1]
     cookies_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    if cookies_path and os.path.exists(cookies_path):
-        size = os.path.getsize(cookies_path)
-        print(f"🍪 Cookies: {size} bytes", file=sys.stderr)
+    if cookies_path and os.path.exists(cookies_path) and os.path.getsize(cookies_path) > 100:
+        print(f"🍪 Cookies ready", file=sys.stderr)
     else:
         cookies_path = None
-        print("⚠️ No cookies", file=sys.stderr)
 
     try:
         import yt_dlp
@@ -37,10 +35,16 @@ def get_transcript():
                 'quiet': True,
                 'no_warnings': True,
                 'socket_timeout': 30,
+                # ← THIS is the key fix: use Android client, bypasses bot check
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android'],
+                        'player_skip': ['webpage', 'configs'],
+                    }
+                },
             }
             if cookies_path:
                 ydl_opts['cookiefile'] = cookies_path
-                print("✅ yt-dlp using cookies", file=sys.stderr)
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.extract_info(url, download=True)
