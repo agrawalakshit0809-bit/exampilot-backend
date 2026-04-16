@@ -6,15 +6,7 @@ const Groq = require("groq-sdk");
 const app = express();
 
 // ── CORS SETUP ───────────────────────────────────────────────
-app.use(cors({
-    origin: [
-        "http://localhost:3000",
-        "https://exampilot-frontend.vercel.app",
-        process.env.FRONTEND_URL
-    ].filter(Boolean),
-    credentials: true
-}));
-
+app.use(cors());
 app.use(express.json());
 
 // ── UTILITY: Syllabus Cleaner ────────────────────────────────
