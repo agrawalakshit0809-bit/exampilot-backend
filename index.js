@@ -82,21 +82,16 @@ async function groqChat(messages) {
 
 function extractTodayPlan(plan) {
   const match = String(plan || "").match(
-    /\*\*DAY 1[\s\S]*?(?=\*\*DAY 2|\*\*FINAL|$)/i
+    /\*\*DAY 1[\s\S]*?(?=\*\*DAY 2|\*\*FINAL CHECKLIST|$)/i
   );
 
   return match ? match[0].trim() : String(plan || "").trim();
 }
 
+
 app.post("/study-plan", async (req, res) => {
   try {
-    const {
-      examType = "JEE",
-      syllabus,
-      examDate,
-      hoursPerDay = 4,
-    } = req.body;
-
+    const { examType = "JEE", syllabus, examDate, hoursPerDay = 4 } = req.body;
     if (!syllabus || !examDate) {
       return res.status(400).json({
         success: false,
@@ -126,49 +121,64 @@ app.post("/study-plan", async (req, res) => {
     const todayStr = today.toDateString();
 
     const rawPlan = await groqChat([
-      {
-        role: "system",
-        content:
-          "You are ExamPilot, an expert Indian exam planner who creates practical day-by-day study plans.",
-      },
-      {
-        role: "user",
-        content: `Create a study plan for a ${examType} student.
+  {
+    role: "system",
+    content:
+      "You are ExamPilot, an expert Indian exam planner who creates realistic, premium-quality day-by-day study plans for Indian students.",
+  },
+  {
+    role: "user",
+    content: `Create a realistic ${daysLeft}-day study plan for a ${examType} student.
 
-Today is ${todayStr}.
-Exam date: ${examDate}
-Days left: ${daysLeft}
+Today is ${todayStr}. Use correct weekdays.
 Available study time: ${hoursPerDay} hours per day.
 
-If the exam is more than ${planningDays} days away, create a ${planningDays}-day high-priority sprint starting from today.
+Rules:
+- Use only the syllabus provided.
+- Keep each day realistic and executable.
+- Prioritize foundational topics first, then practice, then revision.
+- Do not add motivational filler.
+- Make Day 1 and Day 2 especially strong and clear.
+- The plan should feel useful enough that a student would pay for full access.
 
 Syllabus:
 ${cleanedSyllabus}
 
-Format strictly like this:
+Format exactly like this:
 
-**DAY 1 — [Day Name]**
-- Morning:
-- Evening:
+**DAY 1 - [Day Name]**
 
-**Key Points:**
-...
+**Morning (${Math.max(1, Math.floor(hoursPerDay / 2))} hrs):**
+- [exact topic + exact task]
+- [exact topic + exact task]
 
-**Practice Questions:**
-...
+**Evening (${Math.max(1, Math.ceil(hoursPerDay / 2))} hrs):**
+- [exact topic + exact task]
+- [exact topic + exact task]
 
-**Memory Tricks:**
-...
+**Must Finish Today:**
+- [clear completion target]
+- [clear completion target]
 
-Repeat this format for each day.
+**Practice:**
+- [specific practice task]
+- [specific practice task]
+- [specific practice task]
+
+**Revision Check:**
+- [quick revision or self-test]
+- [what to revisit if weak]
+
+Repeat this exact format for all days.
 
 End with:
+
 **FINAL CHECKLIST**
-- ...
-- ...
-- ...`,
-      },
-    ]);
+- [highest priority revision block]
+- [important practice block]
+- [last-day focus]`,
+  },
+]);
 
     const plan = stripMarkdownFences(rawPlan);
     const todayPlan = extractTodayPlan(plan);
