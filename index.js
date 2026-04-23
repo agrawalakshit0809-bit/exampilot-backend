@@ -29,6 +29,31 @@ function stripMarkdownFences(text) {
     .replace(/\n```$/, "")
     .trim();
 }
+function getTodayInIST() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+}
+
+function formatDateForPrompt(date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 
 const GROQ_KEYS = [
   process.env.GROQ_API_KEY_1,
@@ -99,10 +124,9 @@ app.post("/study-plan", async (req, res) => {
       });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getTodayInIST();
+    const exam = new Date(`${examDate}T00:00:00+05:30`);
 
-    const exam = new Date(`${examDate}T00:00:00`);
 
     if (Number.isNaN(exam.getTime())) {
       return res.status(400).json({
@@ -118,7 +142,8 @@ app.post("/study-plan", async (req, res) => {
 
     const planningDays = Math.min(daysLeft, 30);
     const cleanedSyllabus = cleanSyllabus(syllabus);
-    const todayStr = today.toDateString();
+    const todayStr = formatDateForPrompt(today);
+
 
     const rawPlan = await groqChat([
   {
@@ -130,7 +155,7 @@ app.post("/study-plan", async (req, res) => {
     role: "user",
     content: `Create a realistic ${daysLeft}-day study plan for a ${examType} student.
 
-Today is ${todayStr}. Use correct weekdays.
+Today is ${todayStr}. DAY 1 must use the real weekday for this date, and each next day must follow the real calendar sequence.
 Available study time: ${hoursPerDay} hours per day.
 
 Rules:
